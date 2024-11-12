@@ -1,4 +1,5 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 from amplpy import AMPL, add_to_path, variable
 
 # Initiailize the AMPL enviorment
@@ -39,8 +40,46 @@ def get_pd_df(x_var : variable.Variable) -> pd.DataFrame :
 def rename_columns(x_df : pd.DataFrame) -> pd.DataFrame :
     x_df.columns = ['TEAMS', 'TIMESLOTS', 'x']
     return x_df
+
+
+def make_gantt_chart(output_path : str, timeLength : int) : 
+    # Step 1: Load the CSV data
+    df = pd.read_csv(output_path)
+
+    # Step 2: Create a list of tasks for the Gantt chart
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Step 3: Iterate over each row to add it to the Gantt chart
+    for i, row in df.iterrows():
+        team = row["TEAMS"]
+        start_time = row["TIMESLOTS"]
+        if row["x"] == 1 : 
+            ax.barh(team, timeLength, left=(start_time-1)*timeLength)
+
+    # Step 4: Customize the chart
+    ax.set_xlabel("TIMESLOTS")
+    ax.set_ylabel("TEAMS")
+    ax.set_title("Timetable for Thermal Presentations")
+
+    # Set yticks to intervals of 1
+    ax.set_yticks(df["TEAMS"].unique())
+    
+    # Set xticks to intervals of 15 (each interval represents one timeslot of 15 minutes)
+    ax.set_xticks(range(0, df["TIMESLOTS"].max() * timeLength + 1, timeLength))
+
+    # TODO : 1. add related prof name on blocks of each team
+
+    plt.grid(True)
+
+    # Show plot
+    plt.show()
+
+
 x_df = get_pd_df(x_var)
 x_df = rename_columns(x_df)
 
 # Saving new csv file
 x_df.to_csv(output_path, index = False)
+
+# making gantt chart assuming time interval is 15min
+make_gantt_chart(output_path, 15)
