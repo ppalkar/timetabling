@@ -1,6 +1,10 @@
 # timetabling
 
 
-#### TimeTable for Thermal presentations :
+#### GanttChart for Thermal presentations :
  
-![Thermal Slot](./images/initial_model_ganttChart.png)
+![Thermal Slot ganttChart](./images/initial_model_ganttChart.png)
+
+#### Timetable for Thermal presentations :
+
+![Thermal Slot timetable](./images/initial_model_timetable.png)
