@@ -4,31 +4,10 @@ import matplotlib.pyplot as plt
 import re
 from amplpy import AMPL, add_to_path, variable
 
-# Initiailize the AMPL enviorment
-add_to_path("/Users/Rehan/Downloads/AMPL")
-ampl = AMPL()
-
-ampl.setOption('solver', '/Users/Rehan/Downloads/ampl_macos64/gurobi')
-ampl.setOption('gurobi_options', 'timelimit=60')
-
-# path to input and optput files.
-model_path = 'initial_model.mod'
-data_path = 'initial_model.dat'
-output_path = "output.csv"
-
-# reading model and data
-ampl.read(model_path)
-ampl.readData(data_path)
-
-
-# Run the ampl model
-ampl.solve()
-
-# Taking x variable.
-x_var = ampl.get_variable('x')
 
 # function to convert variable to pd.DataFrame
 def get_pd_df(x_var : variable.Variable) -> pd.DataFrame : 
+    '''Makes pandas dataframe from solved variable which can be multidimensional.'''
     x_ampldf = x_var.get_values()
     
     headers = x_ampldf._get_headers()
@@ -40,12 +19,14 @@ def get_pd_df(x_var : variable.Variable) -> pd.DataFrame :
 
 # function to rename columns of obtained pandas dataframe
 def rename_columns(x_df : pd.DataFrame) -> pd.DataFrame :
+    '''Renames columns of pandas dataframe.'''
     x_df.columns = ['TEAMS', 'TIMESLOTS', 'x']
     return x_df
 
 
 
 def parse_teams_per_prof(dat_file_path : str) -> dict :
+    '''Parses data file to obtain prof team mappings.'''
     # Parse Teams_per_prof set from .dat file
     teams_per_prof = {}
     with open(dat_file_path, 'r') as f:
@@ -59,6 +40,7 @@ def parse_teams_per_prof(dat_file_path : str) -> dict :
 
 
 def make_gantt_chart(output_path : str, timeLength : int, teams_per_prof : dict) : 
+    '''makes gantt chart out of saved csv file.'''
     # Step 1: Load the CSV data
     df = pd.read_csv(output_path)
 
@@ -96,7 +78,7 @@ def make_gantt_chart(output_path : str, timeLength : int, teams_per_prof : dict)
     # Step 4: Customize the chart
     ax.set_xlabel("TIMESLOTS")
     ax.set_ylabel("PROFESSORS")
-    ax.set_title("Gantt Chart for Thermal Presentations")
+    ax.set_title("Gantt Chart for Presentations")
 
     # Set yticks to intervals of 1
     ax.set_yticks(range(len(teams_per_prof)))
@@ -105,19 +87,56 @@ def make_gantt_chart(output_path : str, timeLength : int, teams_per_prof : dict)
     # Set xticks to intervals of 15 (each interval represents one timeslot of 15 minutes)
     ax.set_xticks(range(0, df["TIMESLOTS"].max() * timeLength + 1, timeLength))
 
+    # Rotate the x-tick labels by 45 degrees and align to the right
+    ax.set_xticklabels(ax.get_xticks(), rotation= -1*45, ha='right', va='top')  
+
     plt.grid(True)
 
     # Show plot
     plt.show()
 
 
-x_df = get_pd_df(x_var)
-x_df = rename_columns(x_df)
+def main(toTrain : bool, ampl : AMPL, model_path : str, data_path : str, output_path : str, makeGantt : bool, timeLength : int = 15):
+    if(toTrain):
+        # reading model and data
+        ampl.read(model_path)
+        ampl.readData(data_path)
 
-# Saving new csv file
-x_df.to_csv(output_path, index = False)
+        # Run the ampl model
+        ampl.solve()
 
-teams_per_prof = parse_teams_per_prof(data_path)
+        # Taking x variable.
+        x_var = ampl.get_variable('x')
 
-# making gantt chart assuming time interval is 15min
-make_gantt_chart(output_path, 15, teams_per_prof)
+        x_df = get_pd_df(x_var)
+        x_df = rename_columns(x_df)
+
+        # Saving new csv file
+        x_df.to_csv(output_path, index = False)
+
+    teams_per_prof = parse_teams_per_prof(data_path)
+
+    if(makeGantt):
+        make_gantt_chart(output_path, timeLength, teams_per_prof)
+
+
+if __name__ == "__main__":
+
+    # Initiailize the AMPL enviorment
+    add_to_path("/Users/Rehan/Downloads/AMPL")
+    ampl = AMPL()
+
+    ampl.setOption('solver', '/Users/Rehan/Downloads/ampl_macos64/gurobi')
+    ampl.setOption('gurobi_options', 'timelimit=300') # adjust timelimit. Currently set to 300sec
+
+    toTrain = False
+    # path to input and optput files.
+    model_path = 'initial_model.mod'
+    data_path = 'initial_model_industrial.dat'
+    output_path = 'output_industrial.csv'
+    
+    makeGantt = True
+    timeLength = 15
+
+    main(toTrain, ampl, model_path, data_path, output_path, makeGantt, timeLength)
+    
